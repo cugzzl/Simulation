@@ -1,0 +1,8 @@
+{
+  "host": "58.45.191.73",
+  "port": 9123,
+  "database": "drone",
+  "user": "drone",
+  "password": "abc123.",
+  "charset": "utf8mb4"
+}

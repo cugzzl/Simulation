@@ -1,0 +1,94 @@
+
+在同一个步长内，需要去判断是否无人机攻击事件，如果发生了，则进行目标掉血事件，
+但是在无人机攻击和目标掉血事件中间应该是隔了好几个步长的，不是在同一个步长内更新掉血事件.
+因此需要在当前步长内，将下几个步长将要发生的事件缓存起来，当到达指定步长时，再更新目标
+
+        需要确定的东西：哪一个step中，哪一个id的目标，掉几滴血
+
+
+需要广播的： 同一个步长：发生了投弹事件
+                ||      攻击间隔时间
+                ||      炸弹飞行时间
+                ||         共n个步长,(n=1,2,...)
+                ||
+           同一个步长：发生了爆炸事件，发生了目标掉血事件
+
+
+进程间共享变量: 无人机实时状态、元任务组实时状态、触发事件、触发事件参数、目标实例状态、原始目标状态
+manager = Manager()
+shared_uav_status = manager.list()
+shared_unit_task = manager.list()
+shared_original_target = manager.list()
+shared_event = manager.list()
+shared_event_param = manager.list()
+
+效能评估数据： 本次仿真的时间；每一个目标的完成进度（剩余血量）；每一架无人机的剩余载弹量和耗费的载弹量；
+本次仿真共消耗的载荷；本次仿真得到的收益；每一架无人机的总飞行航程；
+
+
+
+函数： save_uav_task
+ 参数：此次仿真类型（task_type）、所有的目标、所有的突发状况、当前时间、试验id；
+      每一架无人机在每个目标点的动作参数[[action1_param, action2_param],[action1_param,action2_param]]
+      每一架无人机的固定参数：uav_type_id, uav_name, height, interval_time, radius
+      每一架无人机的动态参数：current_ammo
+      每一个元任务组的初始状态[[id,current_shoot]];
+      每一个原始目标的初始状态[id, zone_current_shoot];
+
+step = 0
+while True:
+
+
+    1. 获取无人机状态（不包括current_shoot的所有状态）:
+        1.1  订阅ros总线中的消息设置为global变量，包含：
+            current_uav_status:[id,position, orientation]
+
+    2.  对元任务组进行过滤:
+        函数：filter_unit_task
+           参数：所有的目标、所有的突发状况、当前步长、试验id
+            2.1 获取当前参与仿真的所有目标的状态
+            current_unit_task:[id, experiment_id, zone_id, position, meta_task_profit, current_step]
+
+    3. 循环判断每一架无人机是否到达目标位置，并触发事件（通过ros订阅消息 or 通过主控程序判断每一架无人机的当前位置是否在目标位置中）:
+        3.1  if: check_arrive: (通过判断current_uav_status中的position与算法的position是否一致)
+                3.2 触发事件
+                    函数：trig_event
+                       参数：试验id，无人机id，任务类型，当前步长，任务位置，动作参数(action_param)，
+                            拍摄/攻击间隔时间，飞行高度，所有的事件(shared_event)，所有的事件参数(shared_event_param)，
+                            无人机参数（screen_uav_param）
+                        3.2.1 触发无人机拍照事件
+                          3.2.1.1 向事件表中插入无人机拍照事件
+                            uav_event = [event_id, experiment_id, 0, object_id, current_step]
+                            shared_event.append(uav_event)
+                          3.2.1.2 无人机弹药量/剩余拍照次数减少
+                            screen_uav_param[2] = screen_uav_param[2] - action_param
+                          3.2.1.3 产生侦察/爆炸事件
+                             函数：do_action
+                                 参数：当前步长，动作参数action_param（拍照/攻击次数），拍照/攻击间隔时间，飞行高度，
+                                      无人机id，任务类型，拍照/杀伤半径(radius)，杀伤概率，位置，试验id，
+                                      所有的事件(shared_event)，所有的事件参数(shared_event_param)
+
+                                 每一次拍照/攻击都为一次事件
+                                 for i in range(action_param):
+                                     action_event =[event_id, experiment_id, 1, object_id, current_step]
+                                     shared_event.append(action_event)
+                                     action_event_param = [event_id, experiment_id, radius, probability, position]
+                                     shared_event_param.append(action_event_param)
+                                     3.2.1.3.1 发生目标掉血事件
+
+    step += 1
+
+
+
+超实时飞行预测输出：
+    [[uav_id, [x,y,z], current_status]],
+    如[[1,[0,0,0], 2], [2, [1,1,1], 1]]表示uav_id为1的无人机当前在[0,0,0]的位置，当前状态为2，为侦察状态；
+    uav_id为2的无人机当前在[1,1,1]的位置，当前状态为2，为飞行状态；
+
+重规划算法输入需求：
+    1. 任务重分配和航迹重规划分别选用哪种算法
+    2. 选用算法的参数
+
+    步骤：   1. 通过scen_scenario获取strategy_id
+            2. 通过sim_strategy获取重规划算法algorithm_param_id
+            3. 通过algorithm_param_id获得算法类型编号 algo_id和算法参数

@@ -1,0 +1,7 @@
+{
+  "step": 1,
+  "prediction_time": 5,
+  "uav_height": 20,
+  "map_accuracy": 100,
+  "dem_accuracy": 12.5
+}

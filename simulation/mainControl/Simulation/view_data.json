@@ -1,0 +1,46 @@
+
+{
+"0": [
+    {
+        "uav_id": 0,
+        "position": [0,0,0],
+        "orientation": [0,0,0,0],
+        "current_load": 1
+    },
+    {
+        "uav_id": 1,
+        "position": [0,0,0],
+        "orientation": [0,0,0,0],
+        "current_load": 1
+    }
+],
+"1": [
+    {
+        "zone_id": 0,
+        "current_load": 1,
+        "is_detected": 0
+    },
+    {
+        "zone_id": 1,
+        "current_load": 1,
+        "is_detected": 1
+    }
+],
+"2": [
+    {
+        "event_type_id": 0,
+        "object_id": 0,
+        "event_param": [0,5]
+    },
+    {
+        "event_type_id": 1,
+        "object_id": 0,
+        "event_param": [[0, 100], [0,0,0]]
+    },
+    {
+        "event_type_id": 2,
+        "object_id": 3,
+        "event_param": [0,5]
+    }
+]
+}
